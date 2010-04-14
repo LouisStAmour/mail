@@ -8,7 +8,7 @@ module Mail
     aspecial     = %Q|()<>[]:;@\\,."| # RFC5322
     tspecial     = %Q|()<>@,;:\\"/[]?=| # RFC2045
     lwsp         = %Q| \t\r\n|
-    control      = %Q|\x00-\x1f\x7f-\xff|
+    control      = %Q|\x00-\x1f\x7f-\xff|.force_encoding(Encoding::BINARY)
     
     CRLF          = /\r\n/
     WSP           = /[#{white_space}]/
