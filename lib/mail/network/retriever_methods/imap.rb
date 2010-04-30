@@ -39,8 +39,6 @@ module Mail
                         :port                 => 110,
                         :user_name            => nil,
                         :password             => nil,
-                        :mailbox              => "INBOX",
-                        :query                => "ALL",
                         :enable_ssl           => false }.merge!(values)
     end
     
@@ -83,6 +81,13 @@ module Mail
       find(options, &block)
     end
     
+    # Get folders from imap implementation of http://github.com/kbaum/mail/
+    def folders
+      start do |imap|
+        imap.list("*", "*").collect(&:name)
+      end
+    end
+    
     # Find emails in a POP3 mailbox. Without any options, the 5 last received emails are returned.
     #
     # Possible options:
@@ -95,12 +100,17 @@ module Mail
       options = validate_options(options)
       
       start do |imap|
-        uids = imap.uid_search(settings[:query].split(" "))
+        imap.select(options[:mailbox])
+        uids = imap.uid_search(options[:query].split(" "))
+        
         uids.reverse! if options[:what] == :first
-        if options[:count] != :all
-          uids = uids[0..options[:count]-1]
+        uids = uids.first(options[:count]) if options[:count].is_a? Integer
+        
+        if options[:what].to_sym == :last && options[:order].to_sym == :desc ||
+           options[:what].to_sym == :first && options[:order].to_sym == :asc ||
+          uids.reverse!
         end
-
+        
         if uids.blank?
           return []
         end
@@ -123,9 +133,11 @@ module Mail
     # Set default options
     def validate_options(options)
       options ||= {}
-      options[:count] ||= 10
-      options[:order] ||= :asc
-      options[:what]  ||= :first
+      options[:count]   ||= 10
+      options[:order]   ||= :asc
+      options[:what]    ||= :first
+      options[:mailbox] ||= 'INBOX'
+      options[:query]   ||= 'ALL'
       options
     end
   
@@ -135,7 +147,6 @@ module Mail
 
       imap = Net::IMAP.new(settings[:address], settings[:port], settings[:enable_ssl])
       imap.login(settings[:user_name], settings[:password])
-      imap.select(settings[:mailbox])
 
       yield imap
     ensure
