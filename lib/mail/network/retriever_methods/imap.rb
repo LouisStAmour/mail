@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 module Mail
-  # The Pop3 retriever allows to get the last, first or all emails from a POP3 server.
+  # The IMAP retriever allows to get the last, first or all emails from a IMAP server.
   # Each email retrieved (RFC2822) is given as an instance of +Message+.
   #
   # While being retrieved, emails can be yielded if a block is given.
@@ -9,9 +9,9 @@ module Mail
   # === Example of retrieving Emails from GMail:
   # 
   #   Mail.defaults do
-  #     retriever_method :pop3, { :address             => "pop.gmail.com",
-  #                               :port                => 995,
-  #                               :user_name           => '<username>',
+  #     retriever_method :imap, { :address             => "imap.gmail.com",
+  #                               :port                => 993,
+  #                               :user_name           => '<username>@gmail.com',
   #                               :password            => '<password>',
   #                               :enable_ssl          => true }
   #   end
@@ -20,13 +20,15 @@ module Mail
   #   Mail.first  #=> Returns the first unread email
   #   Mail.last   #=> Returns the first unread email
   # 
-  # You can also pass options into Mail.find to locate an email in your pop mailbox
+  # You can also pass options into Mail.find to locate an email in your IMAP mailbox
   # with the following options:
   # 
-  #   what:  last or first emails. The default is :first.
-  #   order: order of emails returned. Possible values are :asc or :desc. Default value is :asc.
-  #   count: number of emails to retrieve. The default value is 10. A value of 1 returns an
-  #          instance of Message, not an array of Message instances.
+  #   what:    last or first emails. The default is :first.
+  #   order:   order of emails returned. Possible values are :asc or :desc. Default value is :asc.
+  #   count:   number of emails to retrieve. The default value is 10. A value of 1 returns an
+  #            instance of Message, not an array of Message instances.
+  #   mailbox: a mailbox (default is 'INBOX') which you can get by calling Mail.folders,
+  #            currently opens and closes a new imap connection, as does every other function call here.
   # 
   #   Mail.find(:what => :first, :count => 10, :order => :asc)
   #   #=> Returns the first 10 emails in ascending order
@@ -81,14 +83,15 @@ module Mail
       find(options, &block)
     end
     
-    # Get folders from imap implementation of http://github.com/kbaum/mail/
+    # Get folders function from IMAP implementation of http://github.com/kbaum/mail/
+    # (the rest of this implementation is technoweenie's with my fixes, though kbaum's has tests...)
     def folders
       start do |imap|
         imap.list("*", "*").collect(&:name)
       end
     end
     
-    # Find emails in a POP3 mailbox. Without any options, the 5 last received emails are returned.
+    # Find emails in a IMAP mailbox. Without any options, the 5 last received emails are returned.
     #
     # Possible options:
     #   what:  last or first emails. The default is :first.
@@ -141,7 +144,7 @@ module Mail
       options
     end
   
-    # Start a POP3 session and ensures that it will be closed in any case.
+    # Start an IMAP session and ensures that it will be closed in any case.
     def start(config = Mail::Configuration.instance, &block)
       raise ArgumentError.new("Mail::Retrievable#start takes a block") unless block_given?
 
